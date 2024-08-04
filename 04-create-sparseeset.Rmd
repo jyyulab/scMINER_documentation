@@ -1,0 +1,86 @@
+# Create SparseEset object
+
+In this chapter, we will introduce you how to create the **`parseExpressionSet(SparseEset)`** objects from gene expression matrix, genes by cells.
+
+## Solely from the gene expression matrix
+
+This is **the most commonly used way** to create the sparse eSet object with scMINER:
+```{r create-sparse-eset-solely-from-matrix}
+pbmc14k_raw.eset <- createSparseEset(input_matrix = pbmc14k_rawCount, projectID = "PBMC14k", addMetaData = TRUE)
+
+pbmc14k_raw.eset
+```
+- **input_matrix**: it's usually but not limited to a sparse matrix of raw UMI count.
+  - As for the data format, it accepts **`dgCMatrix`**, **`dgTMatrix`**, **`dgeMatrix`**, **`matrix`**, **`data.frame`**.
+  - As for the type of quantification measures, it takes **raw counts**, normalized counts (e.g. **`CPM`** or **`CP10k`**), **`TPM`** (Transcripts Per Million), **`FPKM/RPKM`** (Fragments/Reads Per Kilobase of transcript per Million) and others.
+  - **What if a data frame object is given to it?** When a non-matrix table is passed to `input_matrix` argument, the `createSparseEset()` function will automatically convert it to a matrix. And it the matrix, either converted from other format or directly passed from users, is not sparse. `createSparseEset()` will automatically convert it into sparse matrix, by default. This is controlled by another argument called `do.sparseConversion`, the default of which is `TRUE`. It's not recommended but the users can set it as `FALSE` to disable the conversion. Then `createSparseEset()` will create the eSet based on the regular matrix.
+- **addMetaData**: when this argument is set `TRUE` (this is the default), `createSparseEset()` will automatically generate 5 statistics, 4 for cells and 1 for features, and add them into the `phenoData` and `featureData` slots. These 5 statistics will be used in quality control and data filtration.
+
+```{r sparse-eset-metadata}
+## check the phenoData: metadata of cells
+head(pData(pbmc14k_raw.eset))
+
+## check the featureData: metadata of features
+head(fData(pbmc14k_raw.eset))
+```
+
+## Using self-customized meta data
+
+In some cases, you may have more meta data of either cells (e.g. sample id, treatment condition) or features (e.g. gene full name, gene type, genome location) which will be used in downstream analysis and you do want to add them into the sparse eSet object. the `createSparseEset()` function provides another two arguments, **`cellData`** and **`featureData`**, to take the self-customized meta data. For the PBMC14k dataset, we have the true labels of cell type and would like to add them to the sparse eSet object.
+
+```{r create-sparse-eset-solely-with-cutomized-matadata}
+## read the true labels of cell type for PBMC14k dataset
+true_label <- read.table(system.file("extdata/demo_pbmc14k/PBMC14k_trueLabel.txt.gz", package = "scMINER"), header = T, row.names = 1, sep = "\t", quote = "", stringsAsFactors = FALSE)
+
+head(true_label)
+
+table(true_label$trueLabel_full)
+
+## the true_label much cover all cells in the expression matrix
+table(colnames(pbmc14k_rawCount) %in% row.names(true_label))
+
+## create the sparse eSet object using the true_label
+pbmc14k_raw.eset <- createSparseEset(input_matrix = pbmc14k_rawCount, cellData = true_label, featureData = NULL, projectID = "PBMC14k", addMetaData = TRUE)
+
+## check the true labels of cell type from sparse eSet object
+head(pData(pbmc14k_raw.eset))
+table(pData(pbmc14k_raw.eset)$trueLabel_full)
+```
+
+## From multiple samples
+
+**What if you have multiple samples for one project?** Now it's pretty common to profile multiple samples of the same tissue but under different conditions (e.g. drug treatment) in one project. Analyzing these samples one by one is crucial, and analyzing them in a combined manner may give you more prospects. For this purpose, scMINER provides a function, `combineSparseEset()`, to easily combine the sparse eSet objects of multiple samples.
+
+```{r combine-sparse-eset-readinput, message=FALSE}
+## create a sparse eSet object of each sample to combined
+demo1_mtx <- readInput_10x.dir(input_dir = system.file("extdata/demo_inputs/cell_matrix_10x", package = "scMINER"), featureType = "gene_symbol", removeSuffix = TRUE)
+demo1.eset <- createSparseEset(input_matrix = demo1_mtx, projectID = "demo1", addMetaData = TRUE)
+
+demo2_mtx <- readInput_table(table_file = system.file("extdata/demo_inputs/table_file/demoData2.txt.gz", package = "scMINER"), sep = "\t", is.geneBYcell = TRUE, removeSuffix = TRUE)
+demo2.eset <- createSparseEset(input_matrix = demo2_mtx, projectID = "demo2", addMetaData = TRUE)
+```
+
+
+
+```{r combine-sparse-eset-merge}
+## combine the 4 sparse eSet objects
+library(dplyr)
+combined.eset <- combineSparseEset(eset_list = c(demo1.eset, demo2.eset),
+                                   projectID = c("sample1", "sample2"),
+                                   addPrefix = c("demo1", "demo2"),
+                                   addSurfix = NULL, addMetaData = TRUE, imputeNA = TRUE)
+dim(combined.eset)
+```
+
+A few questions you may have about the `combineSparseEset()` function:
+
+- **What if the input eSets have different features?** `combineSparseEset()` ALWAYS keep all features from the input eSets, and generate NA values wherever the data is not available. By default, this function impute the NA values with the minimum value of the combined matrix, which is usually but not always zero. If this imputation method doesn't fit your study, you can set `imputeNA` to `FALSE` to disable it. If so, the NAs will retain in the eSet object, and you can manually impute them with your own method.
+- **What if the input eSets have some same cell barcodes?** `combineSparseEset()` ALWAYS keep all cells from the input eSets, and will report an error when same barcodes are found in different input eSets. This function provides two arguments, `addPrefix` and `addSurfix`, to solve this issue. You can easily avoid the same barcodes of different input eSets by adding a eSet-specific prefix and/or surfix to the barcodes.
+
+```{r show-barcodes-of-combined-eset}
+head(pData(combined.eset))
+```
+
+- **I have some customized column in the phenoData and/or featureData slots. How does `combineSparseEset()` handle them?** `combineSparseEset()` only keep the columns of phenoData and featureData that shared by all input eSets. Your customized columns would be kept only when they are available in all input eSets.
+- **Are the 5 meta data statistics in the combined eSet still same with those generated in each eSet?** No. By default, `combineSparseEset()` will update (add, if they are not available in input eSets) these 5 meta data statistics based on the combined matrix. It's not recommended but you can disable it by setting `addMataData` to `FALSE`.
+

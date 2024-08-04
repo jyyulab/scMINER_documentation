@@ -1,0 +1,124 @@
+# Get started
+
+This chapter will walk you through how to install scMINER, create a project space for your study and prepare the demo data used in this tutorial.
+
+
+## Installation
+
+scMINER framework is mainly developed with R for its advantages in statistical analysis and data visualization. It also includes two components, [MICA](https://github.com/jyyulab/MICA) and [SJARACNe](https://github.com/jyyulab/SJARACNe), that are developed with Python to take its strengths in calculation speed and memory consumption, since mutual information estimation of large-scale scRNA-seq data is usually compute-intensive.
+
+Please install all three components for the full access to scMINER framework.
+
+### Install scMINER R package {-}
+
+The scMINER R package requires R 4.2.3 or newer, and can be installed from [GitHub](https://github.com/) with:
+``` r
+# install.packages("devtools")
+devtools::install_github("https://github.com/jyyulab/scMINER.git@dev-qpan")
+```
+
+### Install MICA and SJARACNe {-}
+
+The recommended method to install MICA and SJARACNe is to use [conda](https://conda.io/projects/conda/en/latest/) dependency manager:
+
+``` bash
+## setup conda env
+conda create -n scminer python=3.9.2                # Create a python virtual environment
+source activate scminer                             # Activate the virtual environment
+
+## install MICA
+git clone https://github.com/jyyulab/MICA           # Clone the MICA repo
+cd MICA                                             # Switch to the MICA root directory
+pip install .                                       # Install MICA and its dependencies
+mica -h                                             # Check if MICA works
+
+## install SJARACNE
+cd ..                                               # Switch to conda env folder
+git clone https://github.com/jyyulab/SJARACNe.git   # Clone the SJARACNe repo
+cd SJARACNe                                         # Switch to the MICA root directory
+python setup.py build                               # Build SJARACNe binary
+python setup.py install                             # Build SJARACNe binary
+sjaracne -h                                         # Check if SJARACNe works
+```
+
+
+## Demo data
+
+In this tutorial, we will use a ***ground truth*** dataset called **PBMC14k** for demonstration purposes. It was generated from a Peripheral Blood Mononuclear Cells (PBMCs) dataset containing 10 known cell types, with 2,000 cells per type [[Zheng et al., 2017](./data-reference.md#[Zheng et al., 2017])]:
+
+1. We first rectified the gene symbol issues of the original dataset, including the dash-dot conversion (e.g. “RP11-34P13.7” changed to “RP11.34P13.7”) and “X” added to those started with numbers (e.g. “7SK” changed to “X7SK”), by referring to the gene annotation file (GRCh37.82) used in the original study.
+2. Then we removed 3 cell populations, CD34+ cells, CD4+ helper T cells, and total CD8+ cytotoxic cells, from the dataset because of either low sorting purity or a significant overlap with other immune cells based on the sorting strategy, and created a new dataset with seven known cell types and 14k cells in total.
+
+The original dataset is freely available under this accession number [SRP073767](https://www.ncbi.nlm.nih.gov/sra?term=SRP073767) and [Zenodo](https://zenodo.org/record/3357167#.YhQNF2RKj6V).
+
+<details>
+<summary>**How was the PBMC14K dataset generated from the original dataset?**</summary>
+```{r, demo-dataset-preparation, eval=FALSE}
+## Step 1: rectify the invalid gene symbols
+# "Filtered_DownSampled_SortedPBMC_data.csv" is the raw count matrix directly downloaded from Zenodo
+counts <- read.csv("Filtered_DownSampled_SortedPBMC_data.csv", row.names = 1) 
+d <- t(counts); dim(d) # it includes 21592 genes and 20000 cells
+
+# "genesymbol_from_GTF_GRCh37.txt" contains the official gene ids and symbols extracted from GTF file downloaded from
+officialGene <- read.table("genesymbol_from_GTF_GRCh37.txt", header = T, sep = "\t", quote = "", stringsAsFactors = F); head(officialGene)  https://ftp.ensembl.org/pub/grch37/current/gtf/homo_sapiens/
+officialGene$dotted_symbol <- gsub("-", "\\.", officialGene$gene_name); officialGene$dotted_symbol <- make.unique(officialGene$dotted_symbol)
+table(row.names(d) %in% officialGene$dotted_symbol); row.names(d)[! row.names(d) %in% officialGene$dotted_symbol] # two genes are not in: X7SK.1 and X7SK.2
+row.names(d) <- gsub("X7SK.1", "7SK", row.names(d)); row.names(d) <- gsub("X7SK.2", "7SK.1", row.names(d))
+table(row.names(d) %in% officialGene$dotted_symbol) # all true
+row.names(officialGene) <- officialGene$dotted_symbol
+officialGene <- officialGene[row.names(d),]
+row.names(d) <- make.unique(officialGene$gene_name)
+
+# "Labels.csv" contains the true labels of cell types and was directly downloaded from Zenodo
+celltype <- read.csv("Labels.csv"); head(celltype); 
+table(celltype$x) # 2000 cells for each of 10 cell types: CD14+ Monocyte, CD19+ B, CD34+, CD4+ T Helper2, CD4+/CD25 T Reg, CD4+/CD45RA+/CD25- Naive T, CD4+/CD45RO+ Memory, CD56+ NK, CD8+ Cytotoxic T, CD8+/CD45RA+ Naive Cytotoxic
+df <- data.frame(cell_barcode = colnames(d), trueLabel_full = celltype$x); dim(df)
+truelabel_map <- c(`CD14+ Monocyte`="Monocyte", `CD19+ B`="B", `CD34+`="CD34pos", `CD4+ T Helper2`="CD4Th2", `CD4+/CD25 T Reg`="CD4Treg",
+                  `CD4+/CD45RA+/CD25- Naive T`="CD4TN", `CD4+/CD45RO+ Memory`="CD4TCM", `CD56+ NK`="NK", `CD8+ Cytotoxic T`="CD8CTL", `CD8+/CD45RA+ Naive Cytotoxic`="CD8TN")
+df$trueLabel <- as.character(truelabel_map[df$trueLabel_full])
+
+## Step 2: extract 7 populations
+df.14k <- df[df$trueLabel_full %in% c("CD14+ Monocyte", "CD19+ B", "CD4+/CD25 T Reg", "CD4+/CD45RA+/CD25- Naive T", "CD4+/CD45RO+ Memory", "CD56+ NK", "CD8+/CD45RA+ Naive Cytotoxic"),]
+write.table(df.14k, file = "PBMC14k_trueLabel.txt", sep = "\t", row.names = TRUE, col.names = TRUE, quote = FALSE, append = FALSE)
+
+d.14k <- d[,df.14k$cell_barcode]
+d.14k <- d.14k[rowSums(d.14k) > 0,]
+write.table(d.14k, file = "PBMC14k_rawCount.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE, append = FALSE) # 17986 genes, 14000 cells
+```
+</details>
+\
+
+The **PBMC14k** dataset is embeded in scMINER R package and can be easily loaded by:
+```{r check-pbmc14k-dataset, message=FALSE}
+library(scMINER)
+data("pbmc14k_rawCount")
+dim(pbmc14k_rawCount)
+pbmc14k_rawCount[1:5,1:5]
+```
+
+## Create project space
+
+The project space created by scMINER is a folder of specified name in specified directory. It contains 4 subfolders:
+
+- **`DATA`**: to save the sparse eSet objects and other files;
+- **`MICA`**: to save the inputs and outputs of mutual information-based clustering analysis;
+- **`SJARACNe`**: to save the inputs and outputs of network inference and quality control;
+- **`PLOT`**: to save the files of data visualization.
+
+The project space can not only keep your data centralized and organized, but also make the scMINER pipeline more smooth and robust. We strongly recommend you to create a project space for each of your studies.
+
+This can be easily done by `createProjectSpace()` in scMINER:
+```{r create-project-space, eval=FALSE}
+scminer_dir <- createProjectSpace(project_dir = "/your-path", project_name = "PBMC14k")
+```
+
+The command above will create a folder named **`PBMC14k`** in **`/your-path`**, and save the path to the project space (**`/your-path/PBMC14k`**) to `scminer_dir`.
+
+<details>
+<summary>**Can I add, delete or modify files in project space folder?**</summary>
+Yes, you can.
+
+- There are two functions, `drawNetworkQC()` and `getActivityBatch()`, that take directories as inputs, and both of them can validate the inputs. For all the rest functions, the inputs are specific files. So adding files in project space **never** affect the scMINER analysis.
+- Deleting or modifying files in project spare is also safe. The input validation features of scMINER functions can help locate the files with issues. All output files of scMINER are reproducible and can be re-generated quickly. Just be careful with the clustering results in **`MICA`** and network files in **`SJARACNe`**, ad regerating them can take some time. 
+</details>
+\

@@ -1,0 +1,18 @@
+# Data normalization
+
+In this chapter, we will introduce the method of data normalization in scMINER.
+
+We recommend to use **`log2CPM`** method for normalization: the raw counts in each cell are normalized to a library size of 1 million, followed by log2 transformation.
+
+```{r normalize-eset}
+pbmc14k_log2cpm.eset <- normalizeSparseEset(pbmc14k_filtered.eset, scale_factor = 1000000, log_base = 2, log_pseudoCount = 1)
+
+exprs(pbmc14k_log2cpm.eset)[1:5,1:5]
+```
+
+This normalized and log-transformed SparseEset object can be directly used for Mutual Information-based clustering, network inference and other downstream analysis. 
+
+Don't forget to save the SparseEset object after data normalization.
+```{r save-eset-obj-after-normalization, eval=FALSE}
+saveRDS(pbmc14k_log2cpm.eset, file = "/your-path/PBMC14k/DATA/pbmc14k_log2CPM_annotated.rds")
+```

@@ -1,0 +1,56 @@
+# Introduction
+
+This chapter will introduce some principal concepts and unique features of scMINER.
+
+## A few concepts
+
+There are a few concepts that may help you understand scMINER better.
+
+### SparseEset {-}
+
+The **`SparseExpressionSet`** (or **`SparseEset`** for short) is a new class created by scMINER to handle the sparsity in scRNA-seq data. It is derived from [ExpressionSet](https://www.bioconductor.org/packages/release/bioc/vignettes/Biobase/inst/doc/ExpressionSetIntroduction.pdf), and enables to compress, store and access efficiently and conveniently.
+
+The SparseEset object is the **center** of scRNA-seq data analysis by scMINER.
+
+### Mutual Information {-}
+
+[Mutual information](https://en.wikipedia.org/wiki/Mutual_information) is a measure of the mutual dependence between two random variables. It quantifies the amount of information obtained about one variable through the other variable. In other words, it measures how much knowing the value of one variable reduces uncertainty about the value of the other variable. It's widely used in probability theory and information theory.
+
+Compared with the linear correlation that used by most existing tools for scRNA-seq data clustering, mutual information provides a **more general measure** of dependence that can capture ***both linear and non-linear relationships***, and hence may increases the accuracy and sensitivity of scRNA-seq data clustering.
+
+
+||Linear Correlation|Mutual Information|
+|:---|:---|:---|
+|Definition|Measures linear relationship|Measures mutual dependence (both linear and non-linear)|
+|Range|-1 to 1|0 to Inf|
+|Sensitivity to outliers|Sensitive|Less sensitive|
+|Captures Non-linear Relationships|No|Yes|
+|Common Applications|Regression, finance, science|Feature selection, clustering, network inference|
+
+Table: **Comparison of Linear Correlation and Mutual Information (powered by ChatGPT)**
+
+### Gene Activity {-}
+
+The gene activity estimation is one of the most important features of scMINER. ***Mathematically***, the activity of one gene is a type of mean of the expressions of its targets. And ***biologically***, the activity can be interpreted as a measure that describes how actively the driver functions, like the enzymes in digesting their subtracts, kinase in activating their downstream genes. Given the gene expression profiles and networks, scMINER can estimate the activities of some predefined drivers, including not only transcription factors (TFs) but also signaling genes (SIGs). 
+
+## Why use scMINER
+
+(more details to be added)
+
+scMINER includes the following key functions:
+
+- **Mutual information-based clustering**: scMINER measures the cell-cell similarities with **full feature-derived mutual information**. It can catch both linear and non-linear correlations and performs better in cell clustering, especially for those of close states.
+
+- **Gene activity estimation**: scMINER rewires the cell-type specific gene networks solely from the scRNA-seq data, and then estimates the gene activities of not only **transcription factors (TFs)** but also **signaling genes (SIGs)**. The gene activity-based analysis can expose the **main regulators of various biological activities**, like cellular linage differentiation and tissue specificity.
+
+- **SparseEset-centered full-feature tool**: scMINER provides a wide range of functions for **data intake**, **quality control and filtration**, **MI-based clustering**, **network inference**, **gene activity estimation**, **cell type annotation**, **differential expression/activity analysis**, and **data visualization and sharing**. Most of these functions are developed in an object-oriented manner for the **SparseEset object**.
+
+
+## Citation
+
+Please consider citing [this paper](https://www.biorxiv.org/content/10.1101/2023.01.26.523391v1) if you find scMINER useful in your research.
+
+
+## Support
+We welcome your feedback! The scMINER software is developed and maintained by the [Yu Lab @ St. Jude Children's Research Hospital](https://www.stjude.org/research/labs/yu-lab.html) and is released under the Apache License (Version 2.0). Feel free to open an [issue](https://github.com/jyyulab/scMINER/issues), or send us an [email](mailto:jiyang.yu@stjude.org) if you encounter a bug, need our help or just want to make a comment/suggestion.
+
