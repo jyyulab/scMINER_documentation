@@ -18,7 +18,7 @@ When some changes are made to scMINER R package:
   2. In main repository directory (containing **`index.md`** file) of scMINER project, run `pkgdown::build_site()` or `Addins-Build pkgdown`. This will update some files in **`/docs`**.
   3. Git commit and push to GitHub. The website page should automatically renewed.
   
-- If the **Fall Documentation** needs to be modified, then you will need update the book here before you re-build the documentation website:
+- If the **Full Documentation** needs to be modified, then you will need update the book here before you re-build the documentation website:
   1. Modify the **`r markdown`** files accordingly;
   2. In main repository directory (containing **`index.md`** file) of this project, run `bookdown::render_book()` or `Build-Build Book`. This will update some files in **`/docs`**.
   3. Copy all updated files in **`/docs`** into **`scMINER/Docs/bookdown`** folder. We specified **`bookdown/index.html`** as the href of Full Documentation.

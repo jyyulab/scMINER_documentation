@@ -1,6 +1,6 @@
 --- 
 title: "scMINER: a mutual information-based framework for identifying hidden drivers from single-cell omics data"
-author: "John Doe"
+author: "Qingfei Pan"
 date: "`r Sys.Date()`"
 knit: bookdown::render_book
 site: bookdown::bookdown_site

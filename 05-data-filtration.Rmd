@@ -25,7 +25,7 @@ To help assess the data quality and determine the cutoffs for data filtration, s
 drawSparseEsetQC(input_eset = pbmc14k_raw.eset, output_html_file = "/your-path/PBMC14k/PLOT/pbmc14k_rawCount.html", overwrite = TRUE)
 
 ## scMINER supports group-specific QC highlights
-drawSparseEsetQC(input_eset = pbmc14k_raw.eset, output_html_file = "/your-path/PBMC14k/PLOT/pbmc14k_rawCount.html", overwrite = FALSE, group_by = "true_label")
+drawSparseEsetQC(input_eset = pbmc14k_raw.eset, output_html_file = "/your-path/PBMC14k/PLOT/pbmc14k_rawCount.html", overwrite = FALSE, group_by = "trueLabel")
 ```
 
 The quality control report consists of 4 parts:
